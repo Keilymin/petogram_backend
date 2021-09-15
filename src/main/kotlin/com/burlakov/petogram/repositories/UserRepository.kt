@@ -8,4 +8,5 @@ import org.springframework.stereotype.Repository
 interface UserRepository : CrudRepository<User, Long> {
     fun findByEmail(email: String) : User?
     fun findByVerificationCode(code: String): User?
+    fun findByUsername(username: String): User?
 }

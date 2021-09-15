@@ -11,4 +11,6 @@ interface IUserService {
     fun checkUser(user: User): Answer
     fun forgotPassword(email: String, siteURL: String): Answer
     fun sendPasswordRestore(user: User, siteURL: String)
+    fun updateUsername(id: String, username: String) : Answer
+    fun updateAvatar(id: String, avatar: String)
 }

@@ -41,9 +41,9 @@ class UserService : IUserService {
 
     override fun checkUser(user: User): Answer {
         val u = repository.findById(user.id!!)
-        return if (user.password == u.get().password) {
-            Answer("OK", true, u.get())
-        } else Answer("Password is decline", false)
+            return if (user.password == u.get().password) {
+                Answer("OK", true, u.get())
+            } else Answer("Password is decline", false)
     }
 
     override fun logIn(user: User): Answer {
@@ -113,6 +113,21 @@ class UserService : IUserService {
         helper.setText(content, true)
 
         mailSender.send(message)
+    }
+
+    override fun updateUsername(id: String, username: String): Answer {
+        if (repository.findByUsername(username) == null) {
+            val user = repository.findById(id.toLong()).get()
+            user.username = username
+            repository.save(user)
+            return Answer("Ok", true)
+        } else return Answer("Username exists", false)
+    }
+
+    override fun updateAvatar(id: String, avatar: String) {
+        val user = repository.findById(id.toLong()).get()
+        user.avatar = avatar
+        repository.save(user)
     }
 
     fun verify(verificationCode: String): Boolean {
