@@ -1,4 +1,4 @@
-package com.burlakov.petogram
+package com.burlakov.petogram.controllers
 
 import com.burlakov.petogram.models.Answer
 import com.burlakov.petogram.models.User
