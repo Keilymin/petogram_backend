@@ -1,15 +1,15 @@
-package com.burlakov.petogram
+package com.burlakov.petogram.controllers
 
 import com.burlakov.petogram.models.Answer
 import com.burlakov.petogram.models.User
 import com.burlakov.petogram.services.UserService
+import com.burlakov.petogram.utils.FileUploadUtil
 import com.lambdaworks.crypto.SCryptUtil
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.repository.query.Param
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.util.StringUtils
+import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
 import javax.servlet.http.HttpServletRequest
 
 
@@ -32,6 +32,16 @@ class RegisterController {
         }
     }
 
+    @PostMapping("/loadImageAndUsername")
+    fun loadImageAndUsername(@RequestParam("userId") userId: String, @RequestParam("username") username: String, @RequestParam("image") multipartFile: MultipartFile): Answer {
+
+        val fileName: String = StringUtils.cleanPath(multipartFile.originalFilename!!)
+        val uploadDir = "images/$userId"
+        FileUploadUtil.saveFile(uploadDir, fileName, multipartFile)
+        service.updateAvatar(userId, fileName)
+        return service.updateUsername(userId, username)
+    }
+
     private fun getSiteURL(request: HttpServletRequest): String {
         val siteURL = request.requestURL.toString()
         return siteURL.replace(request.servletPath, "")
@@ -51,7 +61,6 @@ class RegisterController {
     fun forgotPassword(@RequestBody email: String, request: HttpServletRequest): Answer {
 
         val newEmail = email.replace("\"", "")
-        print(newEmail)
 
         return service.forgotPassword(newEmail, getSiteURL(request))
     }

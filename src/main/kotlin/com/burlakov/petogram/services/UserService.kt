@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.stereotype.Service
+import javax.jws.soap.SOAPBinding
 import javax.mail.internet.MimeMessage
 
 
@@ -60,13 +61,19 @@ class UserService : IUserService {
     }
 
     override fun sendVerificationEmail(user: User, siteURL: String) {
+
+        val name: String = if (user.username != null) {
+            user.username!!
+        } else
+            user.email
+
         val verifyURL: String = siteURL + "/verify?code=" + user.verificationCode
 
         val toAddress: String = user.email
         val fromAddress = "noreply.petogram@gmail.com"
         val senderName = "Petogram App"
         val subject = "Please verify your registration"
-        val content = ("Dear ${user.email},<br>"
+        val content = ("Dear ${name},<br>"
                 + "Please click the link below to verify your registration:<br>"
                 + "<h3><a href=\"$verifyURL\" target=\"_self\">VERIFY</a></h3>"
                 + "Thank you,<br>"
@@ -115,6 +122,56 @@ class UserService : IUserService {
         mailSender.send(message)
     }
 
+    override fun updateUsername(id: String, username: String): Answer {
+        if (repository.findByUsername(username) == null) {
+            val user = repository.findById(id.toLong()).get()
+            user.username = username
+            repository.save(user)
+            return Answer("Ok", true, user)
+        } else return Answer("Username exists", false)
+    }
+
+    override fun updateAvatar(id: String, avatar: String): Answer {
+        val user = repository.findById(id.toLong()).get()
+        user.avatar = avatar
+        repository.save(user)
+        return Answer("Ok", true, user)
+    }
+
+    override fun updatePassword(id: String, OldPassword: String, NewPassword: String): Answer {
+        val user = repository.findById(id.toLong()).get()
+        if (SCryptUtil.check(OldPassword, user.password)) {
+            user.password = SCryptUtil.scrypt(NewPassword, 16, 8, 1)
+            repository.save(user)
+            return Answer("Ok", true, user)
+        } else return Answer("Wrong data", false)
+    }
+
+    override fun updateEmail(id: String, email: String, siteURL: String): Answer {
+        val user = repository.findById(id.toLong()).get()
+        if (repository.findByEmail(email) == null) {
+
+            sendMailOldEmail(user, siteURL)
+
+            user.email = email
+            val randomCode: String = RandomString.make(64)
+            user.verificationCode = randomCode
+            user.active = false
+            sendVerificationEmail(user, siteURL)
+            repository.save(user)
+            return Answer("Ok", true)
+        } else return Answer("Exist", false)
+    }
+
+    override fun backemail(id: String, email: String) {
+        val user = repository.findById(id.toLong()).get()
+        user.email = email
+        user.verificationCode = null
+        user.active = true
+        repository.save(user)
+    }
+
+
     fun verify(verificationCode: String): Boolean {
         val user: User? = repository.findByVerificationCode(verificationCode)
         return if (user == null || user.active) {
@@ -157,6 +214,37 @@ class UserService : IUserService {
                 + "Your new password is:<br>"
                 + "<h3>${user.password}</h3>"
                 + "<br>Please change your password after login<br>"
+                + "Thank you,<br>"
+                + "Your Petogram.")
+
+        val message: MimeMessage = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message)
+
+        helper.setFrom(fromAddress, senderName)
+        helper.setTo(toAddress)
+        helper.setSubject(subject)
+
+        helper.setText(content, true)
+
+        mailSender.send(message)
+    }
+
+    fun sendMailOldEmail(user: User, siteURL: String) {
+
+        val name: String = if (user.username != null) {
+            user.username!!
+        } else
+            user.email
+
+        val verifyURL: String = siteURL + "/backemail?code=" + user.id.toString() + "/" + user.email
+
+        val toAddress: String = user.email
+        val fromAddress = "noreply.petogram@gmail.com"
+        val senderName = "Petogram App"
+        val subject = "Please verify your registration"
+        val content = ("Dear ${name},<br>"
+                + "Your email changed, if this is not you click this link:<br>"
+                + "<h3><a href=\"$verifyURL\" target=\"_self\">RESTORE</a></h3>"
                 + "Thank you,<br>"
                 + "Your Petogram.")
 
